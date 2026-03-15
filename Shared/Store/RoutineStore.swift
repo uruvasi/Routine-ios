@@ -13,8 +13,7 @@ class RoutineStore: ObservableObject {
 
     // MARK: - CRUD
 
-    func addRoutine(name: String) {
-        let routine = Routine(name: name)
+    func addRoutine(_ routine: Routine) {
         routines.append(routine)
         save()
     }

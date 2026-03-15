@@ -2,13 +2,16 @@
 //  Routine_iosApp.swift
 //  Routine-ios
 //
-//  Created by uruvasi on 2026/03/15.
-//
 
 import SwiftUI
+import UserNotifications
 
 @main
 struct Routine_iosApp: App {
+    init() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()

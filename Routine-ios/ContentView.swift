@@ -2,23 +2,30 @@
 //  ContentView.swift
 //  Routine-ios
 //
-//  Created by uruvasi on 2026/03/15.
-//
 
 import SwiftUI
 
 struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
-    }
-}
+    @StateObject private var routineStore = RoutineStore()
+    @StateObject private var settingsStore = SettingsStore()
 
-#Preview {
-    ContentView()
+    var body: some View {
+        TabView {
+            NavigationStack {
+                RoutineListView()
+            }
+            .tabItem {
+                Label(settingsStore.l.routinesTab, systemImage: "list.bullet.clipboard")
+            }
+
+            NavigationStack {
+                SettingsView()
+            }
+            .tabItem {
+                Label(settingsStore.l.settingsTab, systemImage: "gearshape")
+            }
+        }
+        .environmentObject(routineStore)
+        .environmentObject(settingsStore)
+    }
 }

@@ -3,13 +3,16 @@
 //  Routine-ios
 //
 
-import SwiftUI
+internal import SwiftUI
 import UserNotifications
+import Combine
 
 // MARK: - ViewModel
 
 @MainActor
 class TimerViewModel: ObservableObject {
+    var objectWillChange: ObservableObjectPublisher
+    
     @Published var taskIndex: Int = 0
     @Published var remaining: TimeInterval
     @Published var isRunning = false

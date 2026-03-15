@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		CA95BB222F6651400044FDA2 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA95BB212F6651400044FDA2 /* Models.swift */; };
+		CA95BB242F6651480044FDA2 /* RoutineStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA95BB232F6651480044FDA2 /* RoutineStore.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXCopyFilesBuildPhase section */
 		CA4196982F66478100817E64 /* Embed Watch Content */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -21,31 +26,33 @@
 
 /* Begin PBXFileReference section */
 		CA41967E2F66477E00817E64 /* Routine-watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Routine-watch.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		CA95BB212F6651400044FDA2 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		CA95BB232F6651480044FDA2 /* RoutineStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutineStore.swift; sourceTree = "<group>"; };
 		CAA776672F66417B005535B8 /* Routine-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Routine-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		CA4196A52F664A4A00817E64 /* Exceptions for "Routine-ios" folder in "Routine-watch" target */ = {
+		CA95BB112F664F3E0044FDA2 /* Exceptions for "Routine-watch" folder in "Routine-ios" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Shared/Models/Routine.swift,
-				Shared/Store/RoutineStore.swift,
+				Localization.swift,
+				SettingsStore.swift,
 			);
-			target = CA41967D2F66477E00817E64 /* Routine-watch */;
+			target = CAA776662F66417B005535B8 /* Routine-ios */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CA41967F2F66477E00817E64 /* Routine-watch */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CA95BB112F664F3E0044FDA2 /* Exceptions for "Routine-watch" folder in "Routine-ios" target */,
+			);
 			path = "Routine-watch";
 			sourceTree = "<group>";
 		};
 		CAA776692F66417B005535B8 /* Routine-ios */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				CA4196A52F664A4A00817E64 /* Exceptions for "Routine-ios" folder in "Routine-watch" target */,
-			);
 			path = "Routine-ios";
 			sourceTree = "<group>";
 		};
@@ -75,6 +82,8 @@
 				CAA776692F66417B005535B8 /* Routine-ios */,
 				CA41967F2F66477E00817E64 /* Routine-watch */,
 				CAA776682F66417B005535B8 /* Products */,
+				CA95BB212F6651400044FDA2 /* Models.swift */,
+				CA95BB232F6651480044FDA2 /* RoutineStore.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -202,6 +211,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA95BB242F6651480044FDA2 /* RoutineStore.swift in Sources */,
+				CA95BB222F6651400044FDA2 /* Models.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -235,7 +246,6 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -268,7 +278,6 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -425,7 +434,6 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -461,7 +469,6 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};

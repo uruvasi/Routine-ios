@@ -5,7 +5,7 @@
 //  Created by uruvasi on 2026/03/15.
 //
 
-internal import SwiftUI
+import SwiftUI
 
 @main
 struct Routine_watchApp: App {
