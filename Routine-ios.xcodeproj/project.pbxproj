@@ -24,6 +24,17 @@
 		CAA776672F66417B005535B8 /* Routine-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Routine-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		CA4196A52F664A4A00817E64 /* Exceptions for "Routine-ios" folder in "Routine-watch" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Shared/Models/Routine.swift,
+				Shared/Store/RoutineStore.swift,
+			);
+			target = CA41967D2F66477E00817E64 /* Routine-watch */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CA41967F2F66477E00817E64 /* Routine-watch */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -32,6 +43,9 @@
 		};
 		CAA776692F66417B005535B8 /* Routine-ios */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CA4196A52F664A4A00817E64 /* Exceptions for "Routine-ios" folder in "Routine-watch" target */,
+			);
 			path = "Routine-ios";
 			sourceTree = "<group>";
 		};
