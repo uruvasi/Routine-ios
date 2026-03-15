@@ -10,9 +10,10 @@ PWA版リポジトリ: `uruvasi/routine-app`（別リポジトリ・独立して
 ## スタック
 
 - **Swift + SwiftUI**（iOS 26 / Xcode 26）
+- **Swift Observation `@Observable`**（iOS 17+ / Combine 不使用）
 - **watchOS** コンパニオンアプリ（`Routine-watch` ターゲット）
 - **UserNotifications** — ローカル通知（Watch にもミラーリング）
-- **AVFoundation / AudioToolbox** — TTS + システムサウンド
+- **AVFoundation** — TTS + `AVAudioEngine` プログラマティックトーン生成（消音モード対応）
 - **WatchConnectivity**（未実装・バックログ）
 
 ## ターゲット構成
@@ -69,11 +70,33 @@ enum AppLanguage: String, Codable, CaseIterable { case ja, en }
 
 ## タイマー仕様
 
-- `TimerViewModel`（`@MainActor ObservableObject`）がタイマー状態を管理
-- `taskEndDate: Date` ベースで残り時間を計算（バックグラウンド復帰時に自動補正）
+- `TimerViewModel`（`@MainActor @Observable`）がタイマー状態を管理
+- `taskEndDate: Date` 絶対時刻ベースで残り時間を計算（バックグラウンド復帰時に自動補正）
+- タイマーは `RunLoop.main.add(t, forMode: .common)` で登録（スクロール中・バックグラウンド移行直後も発火）
+- バックグラウンド移行時（`willBackground`）: 残り全タスクの通知を一括プレスケジュール・状態を UserDefaults に永続化
+- フォアグラウンド復帰時（`didForeground`）: `taskEndDate` ベースで経過タスクを計算し状態を補正、通知を再スケジュール
+- アプリ kill → 再起動時: 同一 routineId で保存済み状態があれば `init` で復元、`.onAppear` で `didForeground` を呼んで補正
 - タスク完了時に `UNTimeIntervalNotificationTrigger` でローカル通知をスケジュール（Watch にもミラー）
-- 音声: タスク開始時にビープ + TTS、完了時に別音
-- 自動進行: 時間切れで次のタスクへ
+- 音声: タスク開始時にビープ + TTS、完了時に別音（`AudioAlertManager`）
+- 自動進行: 時間切れで次のタスクへ（`tick()` 内で処理）
+- UserDefaults キー: `timer_taskIndex`、`timer_taskEndDate`、`timer_routineId`
+
+## 音声仕様
+
+- `AudioAlertManager.shared`（`@MainActor` シングルトン）
+- `AVAudioSession.setCategory(.playback, .mixWithOthers)` — 消音スイッチを無視してバックグラウンド再生を許可
+- トーン生成: `AVAudioEngine` + `AVAudioPlayerNode` でサイン波をプログラマティック生成（`AudioToolbox` 不使用）
+  - 開始音: 880Hz / 0.12秒
+  - 完了音: 660Hz / 0.35秒
+- TTS: `AVSpeechSynthesizer` + `AVSpeechUtteranceDefaultSpeechRate` 基準の倍率（`SettingsStore.speechRate`）
+  - `utterance.rate = Float(speechRate) * AVSpeechUtteranceDefaultSpeechRate`
+  - `AVSpeechUtteranceDefaultSpeechRate = 0.5`（Apple 内部定数）
+- `startSilentLoop()` / `stopSilentLoop()`: 無音ループで AVAudioSession を維持（`silentNode` 専用）
+
+## 設定仕様（SettingsStore）
+
+- `language: AppLanguage` — ja/en 切替（UserDefaults `appLanguage_v1`）
+- `speechRate: Double` — TTS 速度倍率 1.0〜2.0（デフォルト 1.0、UserDefaults `speechRate_v1`）
 
 ## Export/Import 仕様（PWA と互換）
 
@@ -103,11 +126,18 @@ enum AppLanguage: String, Codable, CaseIterable { case ja, en }
 
 ### ⚠️ 既知の問題（未解決）
 
-**`Ambiguous implicit access level for import of 'SwiftUI'`**
+**タイマー自動進行時に TTS が流れない**
 
-Xcode 26 の Swift upcoming feature `InternalImportsByDefault` が原因。
-ビルド設定から `SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY` を削除済みだが未解消。
-Context7 MCP で Xcode 26 の正式対応方法を調査予定。
+`TimerViewModel.tick()` 内でタスクが時間切れ自動進行するとき、`lang` の参照がないため TTS がスキップされる。
+手動の next/prev・start 時は正常に TTS が流れる。
+
+**`DurationPickerSheet` の日本語ハードコード**
+
+`RoutineEditorView` 内の `DurationPickerSheet` に `lang` が渡されていないため、英語モードでも「時間を設定」「完了」「キャンセル」と表示される。
+
+**SourceKit の誤検知エラー**
+
+`Shared/` フォルダが `fileSystemSynchronizedGroups` 経由でビルドに含まれているため、SourceKit（エディタ補完・診断）が `Routine`/`RoutineTask`/`AppLanguage` 等を「not found」と誤報告することがある。実際の Xcode ビルドは正常に通る。
 
 ---
 
@@ -136,13 +166,90 @@ Context7 MCP で Xcode 26 の正式対応方法を調査予定。
 
 ---
 
+### 2026-03-15 — セッション2: コードレビュー・バグ修正・@Observable 移行
+
+1. **ビルドエラー解消**
+   - `RoutineTimerView.swift` の `internal import SwiftUI` → `import SwiftUI`（`InternalImportsByDefault` 対応）
+   - `TimerViewModel` の `var objectWillChange: ObservableObjectPublisher` 宣言を削除（`@Observable` が自動合成）
+2. **バグ修正**
+   - `SettingsView` のリセット処理 `routines.removeAll()` → `routineStore.resetAll()` に変更し `save()` が呼ばれるよう修正
+   - `RoutineListView` の三項演算子の型不一致（`.secondary`/`.indigo`）を `Color.secondary`/`Color.indigo` に明示
+   - `String(contentsOf:)` deprecation warning を `String(contentsOf:encoding:.utf8)` に修正
+3. **`@Observable` 移行**（iOS 17+ / Combine 不使用）
+   - `RoutineStore`、`SettingsStore`、`TimerViewModel`: `ObservableObject`+`@Published` → `@Observable`、`Combine` import 削除
+   - 全 View: `@StateObject` → `@State`、`@EnvironmentObject` → `@Environment(Type.self)`、`.environmentObject()` → `.environment()`
+4. **`project.pbxproj` 修正**
+   - 存在しない `Models.swift`/`RoutineStore.swift` への stray 参照を4箇所から削除
+   - `Shared/` フォルダを `PBXFileSystemSynchronizedRootGroup` として登録し、`Routine-ios` ターゲットのコンパイル対象に追加
+
+**現在の状態:** ビルド成功・Warning 0件。`@Observable` ベースのモダンな実装に刷新済み。Watch はプレースホルダーのみ。
+
+---
+
+### 2026-03-15 — セッション3: 音声・バックグラウンド・設定強化
+
+1. **消音モード対応**
+   - `AudioToolbox` の `AudioServicesPlaySystemSound` を廃止
+   - `AVAudioEngine` + `AVAudioPlayerNode` でサイン波トーンをプログラマティック生成
+   - `AVAudioSession.setCategory(.playback, .mixWithOthers)` で消音スイッチを無視
+2. **バックグラウンドタイマー修正**
+   - `Timer.scheduledTimer` → `RunLoop.main.add(t, forMode: .common)` に変更（スクロール中も発火）
+   - `willBackground` / `didForeground` を実装（`scenePhase` に連動）
+   - `taskEndDate` 絶対時刻ベースで経過タスクを補正（`didForeground` でループ fast-forward）
+   - UserDefaults に `taskIndex`・`taskEndDate`・`routineId` を永続化（kill 復帰対応）
+   - バックグラウンド中は残り全タスクの通知を一括プレスケジュール（`willBackground`）
+3. **TTS 速度設定**
+   - `SettingsStore.speechRate: Double`（1.0〜2.0、UserDefaults `speechRate_v1`）
+   - `SettingsView` にスライダー追加（step 0.1、1.0x〜2.0x 表示）
+   - `AudioAlertManager.speechRate` を `RoutineTimerView.onAppear` で同期
+   - `utterance.rate = Float(speechRate) * AVSpeechUtteranceDefaultSpeechRate`（`DefaultSpeechRate = 0.5`）
+4. **バージョン表示**
+   - `SettingsView` の最下部にアプリバージョン + ビルド番号を表示
+   - `project.pbxproj` にシェルスクリプトフェーズ追加: git commit 数をビルド番号に自動設定
+5. **`TESTING.md` 作成**
+   - 実機テスト手順（Developer Mode 設定・証明書信頼・チェックリスト）
+6. **バグ修正（セッション2 未対応分）**
+   - `RoutineStore.resetAll()` 追加（`routines.removeAll()` が `save()` を呼ばない問題）
+   - `String(contentsOf:)` deprecation → `encoding: .utf8`
+   - `SettingsView.body` type-check タイムアウト → `languageSection` / `speechRateSection` に分割
+   - Slider binding のため `@Bindable var settings = settingsStore` を body 内で使用
+
+**現在の状態:** 消音モード対応・バックグラウンドタイマー・TTS 速度設定・バージョン表示が実装済み。実機動作確認済み。
+
+---
+
+### 2026-03-15 — セッション4: バグ修正・機能完成
+
+1. **タイマー自動進行 TTS 修正**
+   - `TimerViewModel` に `private var lang: AppLanguage = .ja` を追加
+   - `start(lang:)` / `didForeground(lang:)` で `self.lang` に保存
+   - `tick()` 内の自動進行時に完了音 + 次タスク名の TTS を追加
+   - 次タスクの通知も `tick()` 内でスケジュール
+   - 最終タスク完了時は `finish(lang: lang)` を呼ぶよう統一（重複コード削除）
+2. **ビルドサンドボックスエラー修正**
+   - `ENABLE_USER_SCRIPT_SANDBOXING = YES` → `NO`（Debug・Release 両設定）
+   - git + PlistBuddy がビルドスクリプト内でファイルアクセスできるよう修正
+3. **TTS 速度スライダー表示修正**
+   - 内部値 0.5〜1.0 を表示上 1.0x〜2.0x に変換（`speechRate * 2.0`）
+4. **Import モード選択 UI**
+   - `@State private var pendingImportText: String?` を追加
+   - ファイル選択後に `confirmationDialog` で「既存に追加」/「すべて置き換え」を選択
+   - `RoutineStore.importMarkdown(_:replace:)` の既存 API をそのまま利用
+5. **DurationPickerSheet i18n**
+   - `lang: AppLanguage` パラメータを追加
+   - 「時間を設定」→ `l.setDuration`（en: "Set Duration"）を `Localization.swift` に追加
+   - 「完了」「キャンセル」→ `l.done` / `l.cancel`
+   - ピッカーの「分」「秒」→ `l.minutes` / `l.seconds`（en: "min" / "sec"）
+
+**現在の状態:** 優先度高バックログ3件がすべて完了。Watch 連携以外の iPhone 機能は実装済み。
+
+---
+
 ## バックログ
 
 ### 優先度高（次のセッションでやること）
 
-- [ ] **ビルドエラー解消** — Xcode 26 の `InternalImportsByDefault` 対応（Context7 で調査）
-- [ ] **実機動作確認** — iPhone 実機でルーティン作成・編集・タイマー実行を確認
-- [ ] **Import モード選択 UI** — 「既存に追加」vs「すべて置き換え」の選択ダイアログを SettingsView に追加
+_（完了済み — 次は Watch 連携）_
 
 ### 優先度中（Watch 連携）
 

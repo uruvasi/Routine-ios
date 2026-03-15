@@ -25,6 +25,7 @@ struct L {
     var taskNamePlaceholder: String  { lang == .ja ? "タスク名" : "Task name" }
     var minutes: String              { lang == .ja ? "分" : "min" }
     var seconds: String              { lang == .ja ? "秒" : "sec" }
+    var setDuration: String          { lang == .ja ? "時間を設定" : "Set Duration" }
     var deleteRoutine: String        { lang == .ja ? "ルーティンを削除" : "Delete Routine" }
     var confirmDeleteRoutine: String { lang == .ja ? "このルーティンを削除しますか？" : "Delete this routine?" }
     var cancel: String               { lang == .ja ? "キャンセル" : "Cancel" }
@@ -48,8 +49,11 @@ struct L {
     var importMarkdown: String { lang == .ja ? "Markdownをインポート" : "Import Markdown" }
     var appendImport: String   { lang == .ja ? "既存に追加" : "Append" }
     var replaceImport: String  { lang == .ja ? "すべて置き換え" : "Replace All" }
-    var resetAllData: String   { lang == .ja ? "すべてリセット" : "Reset All" }
-    var confirmReset: String   { lang == .ja ? "すべてのルーティンを削除しますか？" : "Delete all routines?" }
+    var resetAllData: String      { lang == .ja ? "すべてリセット" : "Reset All" }
+    var confirmReset: String      { lang == .ja ? "すべてのルーティンを削除しますか？" : "Delete all routines?" }
+    var speechRateSection: String { lang == .ja ? "読み上げ速度" : "Speech Speed" }
+    var speechRateSlow: String    { lang == .ja ? "遅い" : "Slow" }
+    var speechRateFast: String    { lang == .ja ? "速い" : "Fast" }
 
     // TTS
     func speakTaskStart(_ name: String) -> String {

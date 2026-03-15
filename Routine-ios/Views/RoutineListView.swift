@@ -12,8 +12,8 @@ private struct EditContext: Identifiable {
 }
 
 struct RoutineListView: View {
-    @EnvironmentObject var routineStore: RoutineStore
-    @EnvironmentObject var settingsStore: SettingsStore
+    @Environment(RoutineStore.self) var routineStore
+    @Environment(SettingsStore.self) var settingsStore
 
     @State private var editContext: EditContext?
     @State private var runningRoutine: Routine?
@@ -72,7 +72,7 @@ struct RoutineListView: View {
 }
 
 private struct RoutineRowView: View {
-    @EnvironmentObject var settingsStore: SettingsStore
+    @Environment(SettingsStore.self) var settingsStore
     let routine: Routine
     let onRun: () -> Void
     let onEdit: () -> Void
@@ -93,7 +93,7 @@ private struct RoutineRowView: View {
                 onRun()
             } label: {
                 Image(systemName: "play.fill")
-                    .foregroundStyle(routine.tasks.isEmpty ? .secondary : .indigo)
+                    .foregroundStyle(routine.tasks.isEmpty ? Color.secondary : Color.indigo)
             }
             .disabled(routine.tasks.isEmpty)
             .buttonStyle(.plain)

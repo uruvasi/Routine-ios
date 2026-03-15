@@ -1,9 +1,7 @@
 import Foundation
-import Combine
-import SwiftUI
 
-class RoutineStore: ObservableObject {
-    @Published var routines: [Routine] = []
+@Observable class RoutineStore {
+    var routines: [Routine] = []
 
     private let defaultsKey = "routines_v1"
 
@@ -31,6 +29,11 @@ class RoutineStore: ObservableObject {
 
     func reorderRoutines(from source: IndexSet, to destination: Int) {
         routines.move(fromOffsets: source, toOffset: destination)
+        save()
+    }
+
+    func resetAll() {
+        routines.removeAll()
         save()
     }
 

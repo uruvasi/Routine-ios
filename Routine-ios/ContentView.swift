@@ -6,8 +6,8 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var routineStore = RoutineStore()
-    @StateObject private var settingsStore = SettingsStore()
+    @State private var routineStore = RoutineStore()
+    @State private var settingsStore = SettingsStore()
 
     var body: some View {
         TabView {
@@ -25,7 +25,7 @@ struct ContentView: View {
                 Label(settingsStore.l.settingsTab, systemImage: "gearshape")
             }
         }
-        .environmentObject(routineStore)
-        .environmentObject(settingsStore)
+        .environment(routineStore)
+        .environment(settingsStore)
     }
 }

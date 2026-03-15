@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		CA95BB222F6651400044FDA2 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA95BB212F6651400044FDA2 /* Models.swift */; };
-		CA95BB242F6651480044FDA2 /* RoutineStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA95BB232F6651480044FDA2 /* RoutineStore.swift */; };
+		CAD612312F66CACF0053A262 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CAD612302F66CACF0053A262 /* WatchConnectivity.framework */; };
+		CAD612322F66CAED0053A262 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CAD612302F66CACF0053A262 /* WatchConnectivity.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -26,17 +26,15 @@
 
 /* Begin PBXFileReference section */
 		CA41967E2F66477E00817E64 /* Routine-watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Routine-watch.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		CA95BB212F6651400044FDA2 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
-		CA95BB232F6651480044FDA2 /* RoutineStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutineStore.swift; sourceTree = "<group>"; };
 		CAA776672F66417B005535B8 /* Routine-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Routine-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		CAD612302F66CACF0053A262 /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = System/Library/Frameworks/WatchConnectivity.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		CA95BB112F664F3E0044FDA2 /* Exceptions for "Routine-watch" folder in "Routine-ios" target */ = {
+		CA06B7FA2F667C330060BFD3 /* Exceptions for "Routine-ios" folder in "Routine-ios" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Localization.swift,
-				SettingsStore.swift,
+				Info.plist,
 			);
 			target = CAA776662F66417B005535B8 /* Routine-ios */;
 		};
@@ -45,14 +43,19 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CA41967F2F66477E00817E64 /* Routine-watch */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				CA95BB112F664F3E0044FDA2 /* Exceptions for "Routine-watch" folder in "Routine-ios" target */,
-			);
 			path = "Routine-watch";
+			sourceTree = "<group>";
+		};
+		CA95BB252F6651500044FDA2 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
 			sourceTree = "<group>";
 		};
 		CAA776692F66417B005535B8 /* Routine-ios */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CA06B7FA2F667C330060BFD3 /* Exceptions for "Routine-ios" folder in "Routine-ios" target */,
+			);
 			path = "Routine-ios";
 			sourceTree = "<group>";
 		};
@@ -63,6 +66,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CAD612322F66CAED0053A262 /* WatchConnectivity.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -70,6 +74,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CAD612312F66CACF0053A262 /* WatchConnectivity.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -81,9 +86,9 @@
 			children = (
 				CAA776692F66417B005535B8 /* Routine-ios */,
 				CA41967F2F66477E00817E64 /* Routine-watch */,
+				CA95BB252F6651500044FDA2 /* Shared */,
+				CAD6122F2F66CACF0053A262 /* Frameworks */,
 				CAA776682F66417B005535B8 /* Products */,
-				CA95BB212F6651400044FDA2 /* Models.swift */,
-				CA95BB232F6651480044FDA2 /* RoutineStore.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -94,6 +99,14 @@
 				CA41967E2F66477E00817E64 /* Routine-watch.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		CAD6122F2F66CACF0053A262 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				CAD612302F66CACF0053A262 /* WatchConnectivity.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -114,6 +127,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				CA41967F2F66477E00817E64 /* Routine-watch */,
+				CA95BB252F6651500044FDA2 /* Shared */,
 			);
 			name = "Routine-watch";
 			packageProductDependencies = (
@@ -129,12 +143,14 @@
 				CAA776632F66417B005535B8 /* Sources */,
 				CAA776642F66417B005535B8 /* Frameworks */,
 				CAA776652F66417B005535B8 /* Resources */,
+				CA95BB262F6651600044FDA2 /* Set Build Number */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				CA95BB252F6651500044FDA2 /* Shared */,
 				CAA776692F66417B005535B8 /* Routine-ios */,
 			);
 			name = "Routine-ios";
@@ -199,6 +215,24 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		CA95BB262F6651600044FDA2 /* Set Build Number */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Set Build Number";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "COMMITS=$(git -C \"${SRCROOT}\" rev-list HEAD --count 2>/dev/null || echo \"1\")\n/usr/libexec/PlistBuddy -c \"Set :CFBundleVersion $COMMITS\" \"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		CA41967A2F66477E00817E64 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -211,8 +245,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CA95BB242F6651480044FDA2 /* RoutineStore.swift in Sources */,
-				CA95BB222F6651400044FDA2 /* Models.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -247,7 +279,9 @@
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				SDKROOT = watchos;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Debug;
 		};
@@ -279,7 +313,9 @@
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				SDKROOT = watchos;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Release;
 		};
@@ -321,7 +357,7 @@
 				DEVELOPMENT_TEAM = 9X26753BZU;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -385,7 +421,7 @@
 				DEVELOPMENT_TEAM = 9X26753BZU;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -414,6 +450,7 @@
 				DEVELOPMENT_TEAM = 9X26753BZU;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Routine-ios/Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -449,6 +486,7 @@
 				DEVELOPMENT_TEAM = 9X26753BZU;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Routine-ios/Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

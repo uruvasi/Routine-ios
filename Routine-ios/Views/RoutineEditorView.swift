@@ -6,8 +6,8 @@
 import SwiftUI
 
 struct RoutineEditorView: View {
-    @EnvironmentObject var routineStore: RoutineStore
-    @EnvironmentObject var settingsStore: SettingsStore
+    @Environment(RoutineStore.self) var routineStore
+    @Environment(SettingsStore.self) var settingsStore
     @Environment(\.dismiss) private var dismiss
 
     let originalRoutine: Routine
@@ -86,7 +86,7 @@ struct RoutineEditorView: View {
             Button(l.cancel, role: .cancel) {}
         }
         .sheet(item: $durationPickerTask) { task in
-            DurationPickerSheet(task: task) { updated in
+            DurationPickerSheet(task: task, lang: settingsStore.language) { updated in
                 if let i = tasks.firstIndex(where: { $0.id == updated.id }) {
                     tasks[i] = updated
                 }
@@ -134,14 +134,18 @@ private struct TaskRowEditor: View {
 
 private struct DurationPickerSheet: View {
     let task: RoutineTask
+    let lang: AppLanguage
     let onSave: (RoutineTask) -> Void
     @Environment(\.dismiss) private var dismiss
 
     @State private var minutes: Int
     @State private var seconds: Int
 
-    init(task: RoutineTask, onSave: @escaping (RoutineTask) -> Void) {
+    private var l: L { L(lang: lang) }
+
+    init(task: RoutineTask, lang: AppLanguage, onSave: @escaping (RoutineTask) -> Void) {
         self.task = task
+        self.lang = lang
         self.onSave = onSave
         _minutes = State(initialValue: task.duration / 60)
         _seconds = State(initialValue: task.duration % 60)
@@ -152,7 +156,7 @@ private struct DurationPickerSheet: View {
             HStack(spacing: 0) {
                 Picker("", selection: $minutes) {
                     ForEach(0..<100) { m in
-                        Text("\(m)分").tag(m)
+                        Text("\(m)\(l.minutes)").tag(m)
                     }
                 }
                 .pickerStyle(.wheel)
@@ -160,18 +164,18 @@ private struct DurationPickerSheet: View {
 
                 Picker("", selection: $seconds) {
                     ForEach([0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55], id: \.self) { s in
-                        Text("\(s)秒").tag(s)
+                        Text("\(s)\(l.seconds)").tag(s)
                     }
                 }
                 .pickerStyle(.wheel)
                 .frame(maxWidth: .infinity)
             }
             .padding()
-            .navigationTitle(task.name.isEmpty ? "時間を設定" : task.name)
+            .navigationTitle(task.name.isEmpty ? l.setDuration : task.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完了") {
+                    Button(l.done) {
                         var updated = task
                         updated.duration = max(5, minutes * 60 + seconds)
                         onSave(updated)
@@ -180,7 +184,7 @@ private struct DurationPickerSheet: View {
                     .fontWeight(.semibold)
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("キャンセル") { dismiss() }
+                    Button(l.cancel) { dismiss() }
                 }
             }
         }
