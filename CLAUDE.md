@@ -248,8 +248,8 @@ enum AppLanguage: String, Codable, CaseIterable { case ja, en }
 ## バックログ
 
 ### 優先度高（次のセッションでやること）
-
-_（完了済み — 次は Watch 連携）_
+- [ ] イヤホン接続時に聞こえない？
+- [ ] iPhoneバックグラウンド処理で甘いところがありそう 要チェック
 
 ### 優先度中（Watch 連携）
 
