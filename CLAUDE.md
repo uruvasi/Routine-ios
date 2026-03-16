@@ -31,12 +31,12 @@ Routine-ios/
     Routine_iosApp.swift     — @main、通知権限リクエスト
     ContentView.swift        — TabView（ルーティン / 設定）
     Views/
-      RoutineListView.swift  — ルーティン一覧・並び替え・削除
+      RoutineListView.swift  — ルーティン一覧・並び替え・削除・ミニプレイヤー
       RoutineEditorView.swift — タスク編集・並び替え・時間ピッカー
       RoutineTimerView.swift — タイマー実行（TimerViewModel含む）
-      SettingsView.swift     — 言語切替・Export/Import
+      SettingsView.swift     — 言語・アラーム動作・開始音・Export/Import
     Helpers/
-      AudioAlertManager.swift — ビープ音（AVAudioEngine）
+      AudioAlertManager.swift — ビープ音（AVAudioEngine、プリセット対応）
       RoutineAlarmAttributes.swift — AlarmKit 用 RoutineAlarmMetadata 定義
   Routine-watch/
     Routine_watchApp.swift   — @main（プレースホルダー）
@@ -44,7 +44,7 @@ Routine-ios/
   Shared/
     Localization.swift       — L struct（ja/en 文字列）
     Models/
-      Routine.swift          — Routine / RoutineTask / AppLanguage 型定義
+      Routine.swift          — Routine / RoutineTask / AppLanguage / AlarmBehavior / StartSoundPreset 型定義
     Store/
       RoutineStore.swift     — CRUD・並び替え・Markdown Import/Export・UserDefaults 永続化
       SettingsStore.swift    — 言語・アラーム動作設定（UserDefaults 永続化）
@@ -67,6 +67,8 @@ struct Routine: Identifiable, Codable, Equatable {
 }
 
 enum AppLanguage: String, Codable, CaseIterable { case ja, en }
+enum AlarmBehavior: String, Codable, CaseIterable { case everyTask, finalOnly, off }
+enum StartSoundPreset: String, Codable, CaseIterable { case beep, soft, high, double, off }
 ```
 
 ## タイマー仕様
@@ -78,17 +80,23 @@ enum AppLanguage: String, Codable, CaseIterable { case ja, en }
 - フォアグラウンド復帰時（`didForeground`）: `taskEndDate` ベースで経過タスクを計算し状態を補正、アラームを再スケジュール
 - アプリ kill → 再起動時: 同一 routineId で保存済み状態があれば `init` で復元、`.onAppear` で `didForeground` を呼んで補正
 - タスク完了時に `AlarmManager.AlarmConfiguration.timer(duration:attributes:)` でアラームをスケジュール（消音・Focus モード突破）
-- 音声: タスク開始時・完了時にビープ音（`AudioAlertManager`）。TTS は廃止済み
+- 音声: タスク開始時に `playStart(preset:)`（プリセット選択可）、完了時に `playEnd()`（固定）。TTS は廃止済み
 - 自動進行: 時間切れで次のタスクへ（`tick()` 内で処理）
 - UserDefaults キー: `timer_taskIndex`、`timer_taskEndDate`、`timer_routineId`
+- `TimerViewModel(routine:alarmBehavior:startSoundPreset:)` — 設定値を init で受け取る
 
 ## 音声仕様
 
 - `AudioAlertManager.shared`（`@MainActor` シングルトン）
 - `AVAudioSession.setCategory(.playback, .mixWithOthers)` — 消音スイッチを無視してバックグラウンド再生を許可
 - トーン生成: `AVAudioEngine` + `AVAudioPlayerNode` でサイン波をプログラマティック生成（`AudioToolbox` 不使用）
-  - 開始音: 880Hz / 0.12秒
-  - 完了音: 660Hz / 0.35秒
+- **開始音** `playStart(preset:)` — `StartSoundPreset` で選択可:
+  - `.beep`: 880Hz / 0.12s（デフォルト）
+  - `.soft`: 660Hz / 0.18s
+  - `.high`: 1047Hz / 0.10s
+  - `.double`: 880Hz × 2連打（tone 0.10s + gap 0.08s + tone 0.10s）
+  - `.off`: 無音
+- **完了音** `playEnd()`: 660Hz / 0.35s（固定）
 - TTS は廃止（AlarmKit のシステムアラーム音に移行）
 - `startSilentLoop()` / `stopSilentLoop()`: 無音ループで AVAudioSession を維持（`silentNode` 専用）
 
@@ -104,20 +112,18 @@ enum AppLanguage: String, Codable, CaseIterable { case ja, en }
 
 ## 設定仕様（SettingsStore）
 
-- `language: AppLanguage` — ja/en 切替（UserDefaults `appLanguage_v1`）
-- `alarmBehavior: AlarmBehavior` — アラーム動作（UserDefaults `alarmBehavior_v1`、デフォルト `.finalOnly`）
+| プロパティ | 型 | UserDefaultsキー | デフォルト |
+|---|---|---|---|
+| `language` | `AppLanguage` | `appLanguage_v1` | `.ja` |
+| `alarmBehavior` | `AlarmBehavior` | `alarmBehavior_v1` | `.finalOnly` |
+| `startSoundPreset` | `StartSoundPreset` | `startSoundPreset_v1` | `.beep` |
 
 ## アラーム動作仕様（AlarmBehavior）
 
-```swift
-enum AlarmBehavior: String, Codable, CaseIterable {
-    case everyTask   // タスクごとに鳴らす
-    case finalOnly   // 最後のタスク完了時のみ（デフォルト）
-    case off         // アラームなし（フォアグラウンドのビープのみ）
-}
-```
-
-- `TimerViewModel(routine:alarmBehavior:)` で受け取り、`shouldAlarm(for:)` ヘルパーで条件分岐
+- `.everyTask`: タスクごとにアラームを鳴らす
+- `.finalOnly`: 最後のタスク完了時のみ（デフォルト）
+- `.off`: アラームなし（フォアグラウンドのビープのみ）
+- `TimerViewModel` の `shouldAlarm(for:)` ヘルパーで条件分岐
 - バックグラウンド時の一括スケジュール（`willBackground`）も同条件でフィルタリング
 
 ## Export/Import 仕様（PWA と互換）
@@ -129,7 +135,7 @@ enum AlarmBehavior: String, Codable, CaseIterable {
 ```
 
 - 日本語・英語両フォーマット対応（`parseDuration` で吸収）
-- Import: append（既存に追加）または replace（全置換）— **現状 append のみ実装済み、選択 UI は未実装**
+- Import: append（既存に追加）または replace（全置換）— `confirmationDialog` で選択（セッション4実装済み）
 
 ## 言語対応
 
@@ -298,6 +304,23 @@ enum AlarmBehavior: String, Codable, CaseIterable {
    - アラーム動作仕様セクション追加
 
 **現在の状態:** アラーム動作設定が実装済み。デフォルトは `.finalOnly`（最後のタスクのみ鳴る）。実機テストで動作確認推奨。
+
+---
+
+### 2026-03-17 — セッション7: タスク開始音プリセット追加
+
+1. **`StartSoundPreset` enum 追加**（`Shared/Models/Routine.swift`）
+   - `.beep`（デフォルト）/ `.soft` / `.high` / `.double` / `.off`
+2. **`SettingsStore.startSoundPreset` プロパティ追加**（UserDefaults `startSoundPreset_v1`）
+3. **`AudioAlertManager` 更新**
+   - `playStart()` → `playStart(preset:)` に変更
+   - `.double` 用 `playDoubleTone(frequency:toneDuration:gap:)` ヘルパー追加（2トーン連打を1バッファで生成）
+4. **`Localization.swift` 更新** — タスク開始音セクション・各 case の ja/en 文字列追加
+5. **`SettingsView` 更新** — タスク開始音セクション追加（インラインピッカー）
+6. **`TimerViewModel` 更新** — `init(routine:alarmBehavior:startSoundPreset:)` にパラメータ追加、`playStart(preset:)` を適用
+7. **`RoutineListView` 更新** — VM 生成2箇所に `startSoundPreset` を渡す
+
+**現在の状態:** タスク開始音のプリセット選択が実装済み。アラーム動作と合わせて設定画面から変更可能。
 
 ---
 
