@@ -29,16 +29,6 @@
 		};
 /* End PBXContainerItemProxy section */
 
-
-/* Begin PBXContainerItemProxy section */
-		CACDFA6C2F66D958006A4206 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = CAA7765F2F66417B005535B8 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = CA41967D2F66477E00817E64;
-			remoteInfo = "Routine-watch";
-		};
-/* End PBXContainerItemProxy section */
 /* Begin PBXCopyFilesBuildPhase section */
 		CA4196982F66478100817E64 /* Embed Watch Content */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -63,14 +53,6 @@
 		};
 /* End PBXCopyFilesBuildPhase section */
 
-
-/* Begin PBXTargetDependency section */
-		CACDFA6D2F66D958006A4206 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = CA41967D2F66477E00817E64 /* Routine-watch */;
-			targetProxy = CACDFA6C2F66D958006A4206 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 /* Begin PBXFileReference section */
 		CA41967E2F66477E00817E64 /* Routine-watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Routine-watch.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CAA776672F66417B005535B8 /* Routine-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Routine-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -268,12 +250,12 @@
 /* Begin PBXShellScriptBuildPhase section */
 		CA95BB262F6651600044FDA2 /* Set Build Number */ = {
 			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputPaths = (
 			);
-			alwaysOutOfDate = 1;
 			name = "Set Build Number";
 			outputPaths = (
 			);
@@ -326,6 +308,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Routine-watch";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "com.uruvasi.routine-ios.Routine-ios";
+				INFOPLIST_KEY_WKWatchKitApp = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -341,8 +325,6 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
 				WATCHOS_DEPLOYMENT_TARGET = 10.0;
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "com.uruvasi.routine-ios.Routine-ios";
-				INFOPLIST_KEY_WKWatchKitApp = YES;
 			};
 			name = Debug;
 		};
@@ -357,6 +339,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Routine-watch";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "com.uruvasi.routine-ios.Routine-ios";
+				INFOPLIST_KEY_WKWatchKitApp = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -372,8 +356,6 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
 				WATCHOS_DEPLOYMENT_TARGET = 10.0;
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "com.uruvasi.routine-ios.Routine-ios";
-				INFOPLIST_KEY_WKWatchKitApp = YES;
 			};
 			name = Release;
 		};
@@ -509,15 +491,15 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Routine-ios/Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.uruvasi.routine-ios.Routine-ios";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -545,15 +527,15 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Routine-ios/Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.uruvasi.routine-ios.Routine-ios";
 				PRODUCT_NAME = "$(TARGET_NAME)";

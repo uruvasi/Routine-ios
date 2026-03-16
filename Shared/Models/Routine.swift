@@ -49,3 +49,17 @@ struct Routine: Identifiable, Codable, Equatable {
 enum AppLanguage: String, Codable, CaseIterable {
     case ja, en
 }
+
+enum AlarmBehavior: String, Codable, CaseIterable {
+    case everyTask  // アラームをタスクごとに鳴らす
+    case finalOnly  // 最後のタスク完了時のみ
+    case off        // アラームなし（フォアグラウンドのビープのみ）
+}
+
+enum StartSoundPreset: String, Codable, CaseIterable {
+    case beep    // 880Hz / 0.12s（現在の動作）
+    case soft    // 660Hz / 0.18s（低め・柔らかい）
+    case high    // 1047Hz / 0.10s（高め・明瞭）
+    case double  // 880Hz × 2連打
+    case off     // 無音
+}

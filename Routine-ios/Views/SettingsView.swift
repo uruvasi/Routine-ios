@@ -18,11 +18,11 @@ struct SettingsView: View {
     private var l: L { settingsStore.l }
 
     var body: some View {
-        @Bindable var settings = settingsStore
         Form {
             languageSection
-            speechRateSection(settings: $settings)
 
+            alarmBehaviorSection
+            startSoundSection
 
             // Data
             Section(l.dataSection) {
@@ -112,6 +112,35 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
+    private var startSoundSection: some View {
+        @Bindable var settings = settingsStore
+        Section(l.startSoundSection) {
+            Picker(l.startSoundSection, selection: $settings.startSoundPreset) {
+                Text(l.soundBeep).tag(StartSoundPreset.beep)
+                Text(l.soundSoft).tag(StartSoundPreset.soft)
+                Text(l.soundHigh).tag(StartSoundPreset.high)
+                Text(l.soundDouble).tag(StartSoundPreset.double)
+                Text(l.soundOff).tag(StartSoundPreset.off)
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+        }
+    }
+
+    @ViewBuilder
+    private var alarmBehaviorSection: some View {
+        @Bindable var settings = settingsStore
+        Section(l.alarmBehaviorSection) {
+            Picker("", selection: $settings.alarmBehavior) {
+                Text(l.alarmEveryTask).tag(AlarmBehavior.everyTask)
+                Text(l.alarmFinalOnly).tag(AlarmBehavior.finalOnly)
+                Text(l.alarmOff).tag(AlarmBehavior.off)
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+
+    @ViewBuilder
     private var languageSection: some View {
         Section(l.languageSection) {
             HStack {
@@ -129,27 +158,6 @@ struct SettingsView: View {
                     .buttonStyle(.plain)
                 }
             }
-        }
-    }
-
-    @ViewBuilder
-    private func speechRateSection(settings: Bindable<SettingsStore>) -> some View {
-        Section(l.speechRateSection) {
-            VStack(spacing: 8) {
-                HStack {
-                    Text(l.speechRateSlow).font(.caption).foregroundStyle(.secondary)
-                    Spacer()
-                    Text(String(format: "%.1fx", settingsStore.speechRate * 2.0))
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.indigo)
-                    Spacer()
-                    Text(l.speechRateFast).font(.caption).foregroundStyle(.secondary)
-                }
-                Slider(value: settings.speechRate, in: 0.5...1.0, step: 0.1)
-                    .tint(.indigo)
-                    .padding(.vertical, 8)
-            }
-            .padding(.vertical, 4)
         }
     }
 

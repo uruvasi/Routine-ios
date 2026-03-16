@@ -12,8 +12,8 @@ PWA版リポジトリ: `uruvasi/routine-app`（別リポジトリ・独立して
 - **Swift + SwiftUI**（iOS 26 / Xcode 26）
 - **Swift Observation `@Observable`**（iOS 17+ / Combine 不使用）
 - **watchOS** コンパニオンアプリ（`Routine-watch` ターゲット）
-- **UserNotifications** — ローカル通知（Watch にもミラーリング）
-- **AVFoundation** — TTS + `AVAudioEngine` プログラマティックトーン生成（消音モード対応）
+- **AlarmKit** — タスク完了アラーム（消音・Focus モード突破、ロック画面カウントダウン）
+- **AVFoundation** — `AVAudioEngine` プログラマティックトーン生成（消音モード対応）
 - **WatchConnectivity**（未実装・バックログ）
 
 ## ターゲット構成
@@ -36,7 +36,8 @@ Routine-ios/
       RoutineTimerView.swift — タイマー実行（TimerViewModel含む）
       SettingsView.swift     — 言語切替・Export/Import
     Helpers/
-      AudioAlertManager.swift — TTS + システムサウンド
+      AudioAlertManager.swift — ビープ音（AVAudioEngine）
+      RoutineAlarmAttributes.swift — AlarmKit 用 RoutineAlarmMetadata 定義
   Routine-watch/
     Routine_watchApp.swift   — @main（プレースホルダー）
     ContentView.swift        — Watch UI（プレースホルダー）
@@ -46,7 +47,7 @@ Routine-ios/
       Routine.swift          — Routine / RoutineTask / AppLanguage 型定義
     Store/
       RoutineStore.swift     — CRUD・並び替え・Markdown Import/Export・UserDefaults 永続化
-      SettingsStore.swift    — 言語設定（UserDefaults 永続化）
+      SettingsStore.swift    — 言語・アラーム動作設定（UserDefaults 永続化）
 ```
 
 ## データモデル
@@ -73,11 +74,11 @@ enum AppLanguage: String, Codable, CaseIterable { case ja, en }
 - `TimerViewModel`（`@MainActor @Observable`）がタイマー状態を管理
 - `taskEndDate: Date` 絶対時刻ベースで残り時間を計算（バックグラウンド復帰時に自動補正）
 - タイマーは `RunLoop.main.add(t, forMode: .common)` で登録（スクロール中・バックグラウンド移行直後も発火）
-- バックグラウンド移行時（`willBackground`）: 残り全タスクの通知を一括プレスケジュール・状態を UserDefaults に永続化
-- フォアグラウンド復帰時（`didForeground`）: `taskEndDate` ベースで経過タスクを計算し状態を補正、通知を再スケジュール
+- バックグラウンド移行時（`willBackground`）: 残り全タスクの AlarmKit アラームを一括スケジュール・状態を UserDefaults に永続化
+- フォアグラウンド復帰時（`didForeground`）: `taskEndDate` ベースで経過タスクを計算し状態を補正、アラームを再スケジュール
 - アプリ kill → 再起動時: 同一 routineId で保存済み状態があれば `init` で復元、`.onAppear` で `didForeground` を呼んで補正
-- タスク完了時に `UNTimeIntervalNotificationTrigger` でローカル通知をスケジュール（Watch にもミラー）
-- 音声: タスク開始時にビープ + TTS、完了時に別音（`AudioAlertManager`）
+- タスク完了時に `AlarmManager.AlarmConfiguration.timer(duration:attributes:)` でアラームをスケジュール（消音・Focus モード突破）
+- 音声: タスク開始時・完了時にビープ音（`AudioAlertManager`）。TTS は廃止済み
 - 自動進行: 時間切れで次のタスクへ（`tick()` 内で処理）
 - UserDefaults キー: `timer_taskIndex`、`timer_taskEndDate`、`timer_routineId`
 
@@ -88,15 +89,36 @@ enum AppLanguage: String, Codable, CaseIterable { case ja, en }
 - トーン生成: `AVAudioEngine` + `AVAudioPlayerNode` でサイン波をプログラマティック生成（`AudioToolbox` 不使用）
   - 開始音: 880Hz / 0.12秒
   - 完了音: 660Hz / 0.35秒
-- TTS: `AVSpeechSynthesizer` + `AVSpeechUtteranceDefaultSpeechRate` 基準の倍率（`SettingsStore.speechRate`）
-  - `utterance.rate = Float(speechRate) * AVSpeechUtteranceDefaultSpeechRate`
-  - `AVSpeechUtteranceDefaultSpeechRate = 0.5`（Apple 内部定数）
+- TTS は廃止（AlarmKit のシステムアラーム音に移行）
 - `startSilentLoop()` / `stopSilentLoop()`: 無音ループで AVAudioSession を維持（`silentNode` 専用）
+
+## AlarmKit 仕様
+
+- `RoutineAlarmMetadata: AlarmMetadata`（`nonisolated`、`Helpers/RoutineAlarmAttributes.swift`）
+- アラーム ID: ルーティン UUID の最終バイトにタスクインデックスを XOR した決定論的 UUID（`alarmID(for:)`）
+- スケジュール: `AlarmManager.AlarmConfiguration.timer(duration:attributes:)`
+  - `duration` = `fireDate.timeIntervalSinceNow`（現在〜タスク完了までの秒数）
+- バックグラウンド時: 全タスクの duration を累積計算して一括スケジュール
+- 認証: `AlarmManager.shared.requestAuthorization()` をアプリ起動時に呼び出し
+- `Info.plist`: `NSAlarmKitUsageDescription` 追加済み
 
 ## 設定仕様（SettingsStore）
 
 - `language: AppLanguage` — ja/en 切替（UserDefaults `appLanguage_v1`）
-- `speechRate: Double` — TTS 速度倍率 1.0〜2.0（デフォルト 1.0、UserDefaults `speechRate_v1`）
+- `alarmBehavior: AlarmBehavior` — アラーム動作（UserDefaults `alarmBehavior_v1`、デフォルト `.finalOnly`）
+
+## アラーム動作仕様（AlarmBehavior）
+
+```swift
+enum AlarmBehavior: String, Codable, CaseIterable {
+    case everyTask   // タスクごとに鳴らす
+    case finalOnly   // 最後のタスク完了時のみ（デフォルト）
+    case off         // アラームなし（フォアグラウンドのビープのみ）
+}
+```
+
+- `TimerViewModel(routine:alarmBehavior:)` で受け取り、`shouldAlarm(for:)` ヘルパーで条件分岐
+- バックグラウンド時の一括スケジュール（`willBackground`）も同条件でフィルタリング
 
 ## Export/Import 仕様（PWA と互換）
 
@@ -114,7 +136,7 @@ enum AppLanguage: String, Codable, CaseIterable { case ja, en }
 - `AppLanguage` enum（ja / en）
 - `L(lang:)` struct で全文字列を一元管理（`Shared/Localization.swift`）
 - `SettingsStore` で言語設定を UserDefaults に永続化
-- TTS も言語に追従（`AVSpeechSynthesisVoice(language:)`）
+- TTS は廃止済み（AlarmKit 移行に伴い削除）
 
 ## ビルド・開発環境
 
@@ -125,15 +147,6 @@ enum AppLanguage: String, Codable, CaseIterable { case ja, en }
 ```
 
 ### ⚠️ 既知の問題（未解決）
-
-**タイマー自動進行時に TTS が流れない**
-
-`TimerViewModel.tick()` 内でタスクが時間切れ自動進行するとき、`lang` の参照がないため TTS がスキップされる。
-手動の next/prev・start 時は正常に TTS が流れる。
-
-**`DurationPickerSheet` の日本語ハードコード**
-
-`RoutineEditorView` 内の `DurationPickerSheet` に `lang` が渡されていないため、英語モードでも「時間を設定」「完了」「キャンセル」と表示される。
 
 **SourceKit の誤検知エラー**
 
@@ -245,12 +258,54 @@ enum AppLanguage: String, Codable, CaseIterable { case ja, en }
 
 ---
 
+### 2026-03-17 — セッション5: AlarmKit 移行・TTS 廃止
+
+1. **AlarmKit 移行**（`UNUserNotifications` → `AlarmKit`）
+   - `Info.plist` に `NSAlarmKitUsageDescription` 追加
+   - `Helpers/RoutineAlarmAttributes.swift` 新規作成（`nonisolated struct RoutineAlarmMetadata: AlarmMetadata`）
+   - `Routine_iosApp.swift`: `UNUserNotificationCenter` 認証 → `AlarmManager.shared.requestAuthorization()`
+   - `TimerViewModel`: `scheduleNotification` / `cancelAllNotifications` → `scheduleAlarm` / `cancelAllAlarms`
+   - アラームは `AlarmManager.AlarmConfiguration.timer(duration:attributes:)` で登録
+   - バックグラウンド時: 全タスクの duration を累積計算して一括スケジュール
+   - `alarmID(for:)`: ルーティン UUID 最終バイト XOR で決定論的 UUID 生成
+2. **TTS 廃止**
+   - `AudioAlertManager` から `AVSpeechSynthesizer`・`speak()`・`stopSpeaking()`・`speechRate` を削除
+   - `TimerViewModel` から `lang` パラメータを全メソッドから削除
+   - `SettingsStore` から `speechRate` プロパティ削除
+   - `SettingsView` の読み上げ速度スライダー削除
+   - `Localization.swift` から TTS・speechRate 関連文字列削除
+3. **`PhoneSessionManager` 修正**
+   - `nonisolated` な `didReceiveMessage` 内での `WatchMessage.cmdKey` 参照を `Task { @MainActor in }` 内に移動
+
+**現在の状態:** AlarmKit 移行完了・ビルド成功。消音モード・Focus モード突破のアラームが実装済み。
+
+---
+
+### 2026-03-17 — セッション6: アラーム動作オプション追加・CLAUDE.md 整理
+
+1. **`AlarmBehavior` enum 追加**（`Shared/Models/Routine.swift`）
+   - `.everyTask` / `.finalOnly`（デフォルト）/ `.off`
+2. **`SettingsStore.alarmBehavior` プロパティ追加**（UserDefaults `alarmBehavior_v1`）
+3. **`Localization.swift` 更新** — アラーム動作セクション・各 case の文字列追加（ja/en）
+4. **`SettingsView` 更新** — アラーム動作セクション追加（セグメントコントロール Picker）
+5. **`TimerViewModel` 更新**
+   - `init(routine:alarmBehavior:)` パラメータ追加
+   - `shouldAlarm(for:)` ヘルパー追加
+   - `start()`・`jump(to:)`・`tick()`・`willBackground()`・`didForeground()` の各アラームスケジュール呼び出し前に条件分岐
+6. **`RoutineListView` 更新** — `TimerViewModel` 生成2箇所に `alarmBehavior: settingsStore.alarmBehavior` を渡す
+7. **CLAUDE.md 整理**
+   - `DurationPickerSheet` 日本語ハードコードの既知の問題を削除（セッション4済み）
+   - アラーム動作仕様セクション追加
+
+**現在の状態:** アラーム動作設定が実装済み。デフォルトは `.finalOnly`（最後のタスクのみ鳴る）。実機テストで動作確認推奨。
+
+---
+
 ## バックログ
 
 ### 優先度高（次のセッションでやること）
 - [ ] イヤホン接続時に聞こえない？ Airpod 片耳だとなんか聞こえなかったが両耳だと大丈夫かも
-- [ ] iPhoneバックグラウンド処理で甘いところがありそう 朝1のタスクが昼まで残ってた。要チェック
-- [ ] そもそもタスク始めた後で、どのタスクが動いているのか分からない？　もしかして複数同時に動いてたりしないか　別の画面に遷移したときに進捗状況が分かるようにしたいな
+- [ ] iPhoneバックグラウンド処理で甘いところがありそう 朝1のタスクが昼まで残ってた。要チェック ← 2026-03-16 に TimerViewModel を RoutineListView に移動して scenePhase 管理を改善済み。追加で要確認
 
 ### 優先度中（Watch 連携）
 

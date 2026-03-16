@@ -9,7 +9,6 @@ import AVFoundation
 class AudioAlertManager {
     static let shared = AudioAlertManager()
 
-    private let synthesizer = AVSpeechSynthesizer()
     private let engine = AVAudioEngine()
 
     /// トーン再生用
@@ -18,9 +17,6 @@ class AudioAlertManager {
     private let silentNode = AVAudioPlayerNode()
 
     private let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1)!
-
-    /// SettingsStore の speechRate を反映する（RoutineTimerView が同期）
-    var speechRate: Double = 1.0
 
     init() {
         // .playback カテゴリで消音スイッチを無視 + バックグラウンド再生を許可
@@ -36,27 +32,20 @@ class AudioAlertManager {
 
     // MARK: - 音声アラート
 
-    /// タスク開始音（短い高音ビープ）
-    func playStart() {
-        playTone(frequency: 880, duration: 0.12)
+    /// タスク開始音（プリセット選択可）
+    func playStart(preset: StartSoundPreset = .beep) {
+        switch preset {
+        case .beep:   playTone(frequency: 880,  duration: 0.12)
+        case .soft:   playTone(frequency: 660,  duration: 0.18)
+        case .high:   playTone(frequency: 1047, duration: 0.10)
+        case .double: playDoubleTone(frequency: 880, toneDuration: 0.10, gap: 0.08)
+        case .off:    break
+        }
     }
 
     /// タスク完了音（低めのビープ）
     func playEnd() {
         playTone(frequency: 660, duration: 0.35)
-    }
-
-    /// テキスト読み上げ
-    func speak(_ text: String, lang: AppLanguage) {
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: lang == .ja ? "ja-JP" : "en-US")
-        // speechRate は人間基準の倍率（1.0 = 標準速度）
-        utterance.rate = Float(speechRate) * AVSpeechUtteranceDefaultSpeechRate
-        synthesizer.speak(utterance)
-    }
-
-    func stopSpeaking() {
-        synthesizer.stopSpeaking(at: .immediate)
     }
 
     // MARK: - バックグラウンド維持
@@ -79,6 +68,34 @@ class AudioAlertManager {
     }
 
     // MARK: - Private
+
+    private func playDoubleTone(frequency: Double, toneDuration: Double, gap: Double) {
+        let sampleRate = 44100.0
+        let toneFrames = Int(sampleRate * toneDuration)
+        let gapFrames  = Int(sampleRate * gap)
+        let total      = toneFrames * 2 + gapFrames
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(total)) else { return }
+        buffer.frameLength = AVAudioFrameCount(total)
+        let data = buffer.floatChannelData![0]
+        for i in 0..<total {
+            if i < toneFrames {
+                let t = Double(i) / sampleRate
+                let fadeIn  = min(1.0, t / 0.01)
+                let fadeOut = min(1.0, (toneDuration - t) / 0.05)
+                data[i] = Float(sin(2 * .pi * frequency * t) * 0.5 * fadeIn * fadeOut)
+            } else if i < toneFrames + gapFrames {
+                data[i] = 0
+            } else {
+                let t = Double(i - toneFrames - gapFrames) / sampleRate
+                let fadeIn  = min(1.0, t / 0.01)
+                let fadeOut = min(1.0, (toneDuration - t) / 0.05)
+                data[i] = Float(sin(2 * .pi * frequency * t) * 0.5 * fadeIn * fadeOut)
+            }
+        }
+        toneNode.stop()
+        toneNode.scheduleBuffer(buffer)
+        toneNode.play()
+    }
 
     private func playTone(frequency: Double, duration: Double) {
         let sampleRate = 44100.0

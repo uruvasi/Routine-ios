@@ -4,7 +4,7 @@
 //
 
 import SwiftUI
-import UserNotifications
+import AlarmKit
 
 // MARK: - ViewModel
 
@@ -16,17 +16,20 @@ class TimerViewModel {
     var isFinished = false
 
     let routine: Routine
+    private let alarmBehavior: AlarmBehavior
+    private let startSoundPreset: StartSoundPreset
     private(set) var taskEndDate: Date?
     private var timer: Timer?
-    private(set) var lang: AppLanguage = .ja
 
     // UserDefaults キー（アプリ kill 後の状態復元用）
     private static let keyIndex   = "timer_taskIndex"
     private static let keyEndDate = "timer_taskEndDate"
     private static let keyRoutineId = "timer_routineId"
 
-    init(routine: Routine) {
+    init(routine: Routine, alarmBehavior: AlarmBehavior = .finalOnly, startSoundPreset: StartSoundPreset = .beep) {
         self.routine = routine
+        self.alarmBehavior = alarmBehavior
+        self.startSoundPreset = startSoundPreset
 
         // 同じルーティンの実行中状態が保存されていれば復元
         let savedId = UserDefaults.standard.string(forKey: Self.keyRoutineId)
@@ -57,21 +60,21 @@ class TimerViewModel {
 
     // MARK: - Controls
 
-    func togglePlayPause(lang: AppLanguage) {
-        isRunning ? pause() : start(lang: lang)
+    func togglePlayPause() {
+        isRunning ? pause() : start()
     }
 
-    func start(lang: AppLanguage) {
+    func start() {
         guard !isFinished, let task = currentTask else { return }
-        self.lang = lang
         taskEndDate = Date().addingTimeInterval(remaining)
         isRunning = true
         scheduleTimer()
-        scheduleNotification(task: task, index: taskIndex, after: remaining, lang: lang)
+        if shouldAlarm(for: taskIndex) {
+            scheduleAlarm(task: task, index: taskIndex, at: taskEndDate!)
+        }
         persistState()
         sendWatchState()
-        AudioAlertManager.shared.playStart()
-        AudioAlertManager.shared.speak(L(lang: lang).speakTaskStart(task.name), lang: lang)
+        AudioAlertManager.shared.playStart(preset: startSoundPreset)
     }
 
     func pause() {
@@ -82,57 +85,56 @@ class TimerViewModel {
         isRunning = false
         timer?.invalidate()
         timer = nil
-        cancelAllNotifications()
+        Task { await cancelAllAlarms() }
         clearPersistedState()
         sendWatchState()
     }
 
-    func next(lang: AppLanguage) {
+    func next() {
         let nextIndex = taskIndex + 1
         if nextIndex < routine.tasks.count {
-            jump(to: nextIndex, lang: lang)
+            jump(to: nextIndex)
         } else {
-            finish(lang: lang)
+            finish()
         }
     }
 
-    func prev(lang: AppLanguage) {
+    func prev() {
         if taskIndex > 0 {
-            jump(to: taskIndex - 1, lang: lang)
+            jump(to: taskIndex - 1)
         }
     }
 
     // MARK: - Background / Foreground
 
-    /// バックグラウンド移行時: 残り全タスクの通知を一括スケジュール・状態を永続化
-    func willBackground(lang: AppLanguage) {
+    /// バックグラウンド移行時: 残り全タスクのアラームを一括スケジュール・状態を永続化
+    func willBackground() {
         guard isRunning, !isFinished, let endDate = taskEndDate else { return }
         persistState()
-        cancelAllNotifications()
-
-        // taskEndDate ベースで正確な遅延を計算
-        var delay = endDate.timeIntervalSinceNow
-        for i in taskIndex..<routine.tasks.count {
-            let task = routine.tasks[i]
-            let content = UNMutableNotificationContent()
-            content.title = task.name
-            content.body = lang == .ja ? "完了しました" : "Completed"
-            content.sound = .default
-            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, delay), repeats: false)
-            let req = UNNotificationRequest(identifier: "task-\(i)", content: content, trigger: trigger)
-            UNUserNotificationCenter.current().add(req)
-
-            if i + 1 < routine.tasks.count {
-                delay += TimeInterval(routine.tasks[i + 1].duration)
+        Task {
+            await cancelAllAlarms()
+            // 現在タスクの残り時間を基点に、タスクごとの countdownDuration を累積計算
+            var totalDuration = endDate.timeIntervalSinceNow
+            for i in taskIndex..<routine.tasks.count {
+                let task = routine.tasks[i]
+                if shouldAlarm(for: i) {
+                    let config = AlarmManager.AlarmConfiguration.timer(
+                        duration: max(1, totalDuration),
+                        attributes: makeAlarmAttributes(task: task)
+                    )
+                    try? await AlarmManager.shared.schedule(id: alarmID(for: i), configuration: config)
+                }
+                if i + 1 < routine.tasks.count {
+                    totalDuration += TimeInterval(routine.tasks[i + 1].duration)
+                }
             }
         }
     }
 
     /// フォアグラウンド復帰 / アプリ起動時: 経過タスクを計算して状態を補正
-    func didForeground(lang: AppLanguage) {
-        self.lang = lang
+    func didForeground() {
         guard isRunning, let endDate = taskEndDate else { return }
-        cancelAllNotifications()
+        Task { await cancelAllAlarms() }
 
         var currentEndDate = endDate
         var currentIndex = taskIndex
@@ -144,7 +146,7 @@ class TimerViewModel {
                     TimeInterval(routine.tasks[currentIndex].duration)
                 )
             } else {
-                finish(lang: lang)
+                finish()
                 return
             }
         }
@@ -159,17 +161,17 @@ class TimerViewModel {
         persistState()
         sendWatchState()
 
-        if let task = currentTask {
-            scheduleNotification(task: task, index: taskIndex, after: remaining, lang: lang)
+        if let task = currentTask, shouldAlarm(for: taskIndex) {
+            scheduleAlarm(task: task, index: taskIndex, at: taskEndDate!)
         }
         scheduleTimer()
     }
 
     // MARK: - Private
 
-    private func jump(to index: Int, lang: AppLanguage) {
+    private func jump(to index: Int) {
         let wasRunning = isRunning
-        if wasRunning { timer?.invalidate(); timer = nil; cancelAllNotifications() }
+        if wasRunning { timer?.invalidate(); timer = nil; Task { await cancelAllAlarms() } }
 
         taskIndex = index
         let dur = TimeInterval(routine.tasks[index].duration)
@@ -179,27 +181,27 @@ class TimerViewModel {
             let task = routine.tasks[index]
             taskEndDate = Date().addingTimeInterval(dur)
             scheduleTimer()
-            scheduleNotification(task: task, index: index, after: dur, lang: lang)
+            if shouldAlarm(for: index) {
+                scheduleAlarm(task: task, index: index, at: taskEndDate!)
+            }
             persistState()
             sendWatchState()
-            AudioAlertManager.shared.playStart()
-            AudioAlertManager.shared.speak(L(lang: lang).speakTaskStart(task.name), lang: lang)
+            AudioAlertManager.shared.playStart(preset: startSoundPreset)
         } else {
             taskEndDate = nil
             sendWatchState()
         }
     }
 
-    private func finish(lang: AppLanguage) {
+    private func finish() {
         timer?.invalidate(); timer = nil
         isRunning = false
         isFinished = true
         taskEndDate = nil
-        cancelAllNotifications()
+        Task { await cancelAllAlarms() }
         clearPersistedState()
         sendWatchState()
         AudioAlertManager.shared.playEnd()
-        AudioAlertManager.shared.speak(L(lang: lang).speakFinished(), lang: lang)
     }
 
     private func sendWatchState() {
@@ -236,13 +238,14 @@ class TimerViewModel {
                 let dur = TimeInterval(task.duration)
                 remaining = dur
                 taskEndDate = Date().addingTimeInterval(dur)
-                scheduleNotification(task: task, index: nextIndex, after: dur, lang: lang)
+                if shouldAlarm(for: nextIndex) {
+                    scheduleAlarm(task: task, index: nextIndex, at: taskEndDate!)
+                }
                 persistState()
                 sendWatchState()
                 AudioAlertManager.shared.playEnd()
-                AudioAlertManager.shared.speak(L(lang: lang).speakTaskStart(task.name), lang: lang)
             } else {
-                finish(lang: lang)
+                finish()
             }
         }
     }
@@ -261,21 +264,46 @@ class TimerViewModel {
         UserDefaults.standard.removeObject(forKey: Self.keyEndDate)
     }
 
-    // MARK: - Notifications
+    // MARK: - AlarmKit
 
-    private func scheduleNotification(task: RoutineTask, index: Int, after interval: TimeInterval, lang: AppLanguage) {
-        let content = UNMutableNotificationContent()
-        content.title = task.name
-        content.body = lang == .ja ? "完了しました" : "Completed"
-        content.sound = .default
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, interval), repeats: false)
-        let req = UNNotificationRequest(identifier: "task-\(index)", content: content, trigger: trigger)
-        UNUserNotificationCenter.current().add(req)
+    private func shouldAlarm(for index: Int) -> Bool {
+        switch alarmBehavior {
+        case .everyTask: return true
+        case .finalOnly: return index == routine.tasks.count - 1
+        case .off:       return false
+        }
     }
 
-    private func cancelAllNotifications() {
-        let ids = (0..<routine.tasks.count).map { "task-\($0)" }
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+    private func alarmID(for index: Int) -> UUID {
+        let b = routine.id.uuid
+        return UUID(uuid: (b.0,b.1,b.2,b.3,b.4,b.5,b.6,b.7,
+                           b.8,b.9,b.10,b.11,b.12,b.13,b.14,
+                           UInt8((Int(b.15) ^ (index & 0xFF)) & 0xFF)))
+    }
+
+    private func makeAlarmAttributes(task: RoutineTask) -> AlarmAttributes<RoutineAlarmMetadata> {
+        let title: LocalizedStringResource = "\(task.name)"
+        let alert = AlarmPresentation.Alert(
+            title: title,
+            stopButton: AlarmButton(text: "OK", textColor: .white, systemImageName: "checkmark")
+        )
+        return AlarmAttributes<RoutineAlarmMetadata>(
+            presentation: AlarmPresentation(alert: alert),
+            metadata: RoutineAlarmMetadata(taskName: task.name, routineName: routine.name),
+            tintColor: .indigo
+        )
+    }
+
+    private func scheduleAlarm(task: RoutineTask, index: Int, at fireDate: Date) {
+        let duration = max(1, fireDate.timeIntervalSinceNow)
+        let config = AlarmManager.AlarmConfiguration.timer(duration: duration, attributes: makeAlarmAttributes(task: task))
+        Task { try? await AlarmManager.shared.schedule(id: alarmID(for: index), configuration: config) }
+    }
+
+    private func cancelAllAlarms() async {
+        for i in 0..<routine.tasks.count {
+            try? await AlarmManager.shared.stop(id: alarmID(for: i))
+        }
     }
 }
 
@@ -283,17 +311,10 @@ class TimerViewModel {
 
 struct RoutineTimerView: View {
     @Environment(SettingsStore.self) var settingsStore
-    @Environment(\.scenePhase) private var scenePhase
-    @State private var vm: TimerViewModel
+    let vm: TimerViewModel
     let onBack: () -> Void
 
-    init(routine: Routine, onBack: @escaping () -> Void) {
-        _vm = State(wrappedValue: TimerViewModel(routine: routine))
-        self.onBack = onBack
-    }
-
     private var l: L { settingsStore.l }
-    private var lang: AppLanguage { settingsStore.language }
 
     var body: some View {
         ZStack {
@@ -323,34 +344,21 @@ struct RoutineTimerView: View {
             .padding(.top)
         }
         .onAppear {
-            AudioAlertManager.shared.speechRate = settingsStore.speechRate
-            vm.didForeground(lang: lang)
+            // 復元済み状態のファストフォワード（アプリ再起動後など）
+            vm.didForeground()
             // Watch からのコマンドを受け取り TimerViewModel へ転送
             PhoneSessionManager.shared.onCommand = { [weak vm] cmd in
                 guard let vm else { return }
                 switch cmd {
-                case WatchMessage.cmdToggle: vm.togglePlayPause(lang: vm.lang)
-                case WatchMessage.cmdNext:   vm.next(lang: vm.lang)
-                case WatchMessage.cmdPrev:   vm.prev(lang: vm.lang)
+                case WatchMessage.cmdToggle: vm.togglePlayPause()
+                case WatchMessage.cmdNext:   vm.next()
+                case WatchMessage.cmdPrev:   vm.prev()
                 default: break
                 }
             }
         }
         .onDisappear {
             PhoneSessionManager.shared.onCommand = nil
-        }
-        .onChange(of: settingsStore.speechRate) { _, rate in
-            AudioAlertManager.shared.speechRate = rate
-        }
-        .onChange(of: scenePhase) { _, newPhase in
-            switch newPhase {
-            case .background:
-                vm.willBackground(lang: lang)
-            case .active:
-                vm.didForeground(lang: lang)
-            default:
-                break
-            }
         }
     }
 
@@ -380,7 +388,7 @@ struct RoutineTimerView: View {
 
             HStack(spacing: 40) {
                 Button {
-                    vm.prev(lang: lang)
+                    vm.prev()
                 } label: {
                     Image(systemName: "backward.fill")
                         .font(.title)
@@ -389,7 +397,7 @@ struct RoutineTimerView: View {
                 .foregroundStyle(vm.taskIndex == 0 ? .secondary : .primary)
 
                 Button {
-                    vm.togglePlayPause(lang: lang)
+                    vm.togglePlayPause()
                 } label: {
                     Image(systemName: vm.isRunning ? "pause.circle.fill" : "play.circle.fill")
                         .font(.system(size: 72))
@@ -397,7 +405,7 @@ struct RoutineTimerView: View {
                 }
 
                 Button {
-                    vm.next(lang: lang)
+                    vm.next()
                 } label: {
                     Image(systemName: "forward.fill")
                         .font(.title)

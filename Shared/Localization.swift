@@ -38,6 +38,7 @@ struct L {
     var finished: String       { lang == .ja ? "完了！" : "Finished!" }
     var finishedBody: String   { lang == .ja ? "すべてのタスクが終わりました" : "All tasks completed" }
     var backToList: String     { lang == .ja ? "一覧に戻る" : "Back to list" }
+    var nowRunning: String     { lang == .ja ? "実行中" : "Now Running" }
 
     // Settings
     var settingsTitle: String  { lang == .ja ? "設定" : "Settings" }
@@ -51,15 +52,18 @@ struct L {
     var replaceImport: String  { lang == .ja ? "すべて置き換え" : "Replace All" }
     var resetAllData: String      { lang == .ja ? "すべてリセット" : "Reset All" }
     var confirmReset: String      { lang == .ja ? "すべてのルーティンを削除しますか？" : "Delete all routines?" }
-    var speechRateSection: String { lang == .ja ? "読み上げ速度" : "Speech Speed" }
-    var speechRateSlow: String    { lang == .ja ? "遅い" : "Slow" }
-    var speechRateFast: String    { lang == .ja ? "速い" : "Fast" }
 
-    // TTS
-    func speakTaskStart(_ name: String) -> String {
-        lang == .ja ? "\(name)をはじめます" : "Starting \(name)"
-    }
-    func speakFinished() -> String {
-        lang == .ja ? "すべてのタスクが完了しました" : "All tasks completed"
-    }
+    // Alarm Behavior
+    var alarmBehaviorSection: String  { lang == .ja ? "アラーム" : "Alarm" }
+    var alarmEveryTask: String        { lang == .ja ? "タスクごとに鳴らす" : "Every task" }
+    var alarmFinalOnly: String        { lang == .ja ? "最後のタスクのみ" : "Final task only" }
+    var alarmOff: String              { lang == .ja ? "オフ" : "Off" }
+
+    // Start Sound Preset
+    var startSoundSection: String     { lang == .ja ? "タスク開始音" : "Task Start Sound" }
+    var soundBeep: String             { lang == .ja ? "ビープ" : "Beep" }
+    var soundSoft: String             { lang == .ja ? "ソフト" : "Soft" }
+    var soundHigh: String             { lang == .ja ? "ハイ" : "High" }
+    var soundDouble: String           { lang == .ja ? "ダブル" : "Double" }
+    var soundOff: String              { lang == .ja ? "なし" : "Off" }
 }

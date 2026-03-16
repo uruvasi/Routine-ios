@@ -73,8 +73,8 @@ extension PhoneSessionManager: WCSessionDelegate {
     }
 
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
-        guard let cmd = message[WatchMessage.cmdKey] as? String else { return }
         Task { @MainActor in
+            guard let cmd = message[WatchMessage.cmdKey] as? String else { return }
             self.onCommand?(cmd)
         }
     }
